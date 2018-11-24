@@ -1,5 +1,5 @@
 <?php
-namespace Piggly;
+namespace Piggly\Framework;
 
 /**
  * Loads all classes by using their namespace and a custom extension.
@@ -52,9 +52,12 @@ namespace Piggly;
  *
  * @copyright   2018
  * @license     ./LICENSE GNU General Public License v3.0
- * @package     \Piggly
+ * @package     \Piggly\Framework
  *
- * @version     1.0.0
+ * @version     1.0.1
+ *
+ * @since       1.0.1 Ajusts in loadMappedFile() function.
+ *                    Fixes for a looping bug.
  */
 class Autoload
 {
@@ -295,37 +298,45 @@ class Autoload
      * @param   string   $relative_class    The class relative name.
      * @return  boolean                     TRUE when found, FALSE when not.
      * @access  protected
+     * @since   1.0.1                       Ajust the Exceptions classes.
+     *                                      For example, the file sample.exception.php
+     *                                      has a class named SampleException, so
+     *                                      fix to include the file as sample.exception.php
+     *                                      and not sampleexception.exception.php.
+     *
+     *                                      Fixes for a looping bug.
      * @since   1.0.0
      */
     protected function loadMappedFile ( $prefix, $relative_class )
     {
         // If there's no directory to prefix, returns false
-        if ( ! isset ( $this->prefixes[$prefix] ) )
+        if ( isset ( $this->prefixes[$prefix] ) === false )
         { return false; }
 
-        // To each base directory, tries to load the file
-        foreach ( $this->prefixes as $prefix )
-        {
-            // If file is equal to extension, then it's the standard model
-            // then, doesn't add the extension
-            if ( $relative_class === $prefix['ext'] )
-            {
-                $file = $prefix['dir']
-                        . str_replace( '\\', '/', $relative_class )
-                        . '.php';
-            }
-            else
-            {
-                $file = $prefix['dir']
-                        . str_replace( '\\', '/', $relative_class )
-                        . '.' . $prefix['ext']
-                        . '.php';
-            }
+        $property = $this->prefixes[$prefix];
 
-            // Get's the file
-            if ( $this->requireFile ( $file ) )
-            { return true; }
+        // If file is equal to extension, then it's the standard model
+        // then, doesn't add the extension
+        if ( $relative_class === $property['ext'] )
+        {
+            $file = $property['dir']
+                    . str_replace( '\\', '/', $relative_class )
+                    . '.php';
         }
+        else
+        {
+            if ( $property['ext'] === 'exception' )
+            { $relative_class = str_replace( 'exception', '', $relative_class ); }
+
+            $file = $property['dir']
+                    . str_replace( '\\', '/', $relative_class )
+                    . '.' . $property['ext']
+                    . '.php';
+        }
+
+        // Get's the file
+        if ( $this->requireFile ( $file ) )
+        { return true; }
 
         // No file was found
         return false;
